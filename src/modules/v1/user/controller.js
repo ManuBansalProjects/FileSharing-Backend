@@ -2,7 +2,7 @@ const userModel = require('../../../models/users');
 const userCaloryHistoryModel = require('../../../models/user-calorie-histories');
 
 module.exports = {
-    create : async(req, res) =>{
+    create : async(req, res, next) =>{
         try {
             const {name, gender, age, height, weight} = req.body;
             const data = {
@@ -18,10 +18,10 @@ module.exports = {
             .status(201)
             .json({success : true, message : 'User created successfully'});
         } catch (error) {
-            
+            next(error);
         }
     },
-    list : async(req, res) =>{
+    list : async(req, res, next) =>{
         try {
             let { skip, limit } = req.query;
             skip = skip || 0;
@@ -35,6 +35,7 @@ module.exports = {
             .json({success : true, message : 'success', data : { users, count }});
         } catch (error) {
             console.log(error);    
+            next(error);
         }
     },
     get : async(req, res) =>{
@@ -46,10 +47,10 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'Success', data : {user}});
         } catch (error) {
-            
+            next(error);
         }
     },
-    update : async(req, res) =>{
+    update : async(req, res, next) =>{
         try {
             const {_id, name, gender, age, height, weight} = req.body;
             const updateData = {
@@ -65,10 +66,10 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'User updated successfully'});
         } catch (error) {
-            
+            next(error);
         }
     },
-    delete : async(req, res) =>{
+    delete : async(req, res, next) =>{
         try {
             let { _id } = req.query;
             await userCaloryHistoryModel.deleteMany({user_id : _id});
@@ -78,7 +79,7 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'User deleted successfully'});
         } catch (error) {
-            
+            next(error);
         }
     },
 }

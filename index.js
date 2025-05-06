@@ -6,6 +6,7 @@ const cors = require('cors');
 
 const routes = require('./src/routes');
 const {loadExcelFilesToDB} = require('./src/utils/helperFunctions');
+const { errorMiddleware } = require('./src/middlewares/errorMiddleware');
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
@@ -16,6 +17,8 @@ app.get('/health',(req,res)=>{
 })
 
 app.use('/webservice/api', routes);
+
+app.use(errorMiddleware);
 
 mongoose.connect(process.env.MONGO_CONNECTION_STRING)
 .then(()=>{

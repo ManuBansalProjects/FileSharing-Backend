@@ -2,10 +2,11 @@ const mongoose = require('mongoose');
 const foodModel = require('../../../models/foods');
 const actiivityModel = require('../../../models/activities');
 const userCaloryHistoryModel = require('../../../models/user-calorie-histories');
+const {CustomError} = require('../../../utils/customError');
 const ObjectId = mongoose.Types.ObjectId;
 
 module.exports = {
-    addUserCalories : async(req, res) =>{
+    addUserCalories : async(req, res, next) =>{
         try {
             let { user_id, history_date, foods, activities, total_food_calories, 
               total_activity_calories, bmr } 
@@ -17,7 +18,7 @@ module.exports = {
             }
             const historyExists = await userCaloryHistoryModel.findOne(filter);
             if(historyExists){
-              throw new Error('History date already exists');
+              throw new CustomError(400, 'History date already exists', 'addUserCalories');
             }
 
             foods = foods.map(food =>({
@@ -31,6 +32,7 @@ module.exports = {
               minutes : activity.minutes,
               total_calories : activity.total_calories
             }))
+
             const data = {
                 user_id,
                 history_date : new Date(history_date),
@@ -46,14 +48,10 @@ module.exports = {
             .status(201)
             .json({success : true, message : 'Calories added successfully'});
         } catch (error) {
-          res.status(error.status || 500)
-          .json({
-            success : false,
-            message : error.message || 'Internal server error'
-          })      
+            next(error);
         }
     },
-    listUserCalories : async(req, res) =>{
+    listUserCalories : async(req, res, next) =>{
         try {
             let { user_id, skip, limit } = req.query;
             skip = skip || 0;
@@ -70,9 +68,10 @@ module.exports = {
             .json({success : true, message : 'Success', data : { calories, count }});
         } catch (error) {
             console.log(error);
+            next(error);
         }
     },
-    getUserCalories : async(req, res) =>{
+    getUserCalories : async(req, res, next) =>{
         try {
             let { _id } = req.query;
             const userCalories = await userCaloryHistoryModel.aggregate([
@@ -152,9 +151,10 @@ module.exports = {
             .json({success : true, message : 'Success', data : {userCalories : userCalories[0] || {}}});
         } catch (error) {
             console.log(error);
+            next(error);
         }
     },
-    updateUserCalories : async(req, res) =>{
+    updateUserCalories : async(req, res, next) =>{
         try {
             let { _id, user_id, history_date, foods, activities, total_food_calories, total_activity_calories, bmr } 
             = req.body;
@@ -166,7 +166,7 @@ module.exports = {
             }
             const historyExists = await userCaloryHistoryModel.findOne(filter);
             if(historyExists){
-              throw new Error('History date already exists');
+              throw new CustomError(400, 'History date already exists', 'updateUserCalories');
             }
 
             foods = foods.map(food =>({
@@ -195,14 +195,10 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'Calories updated successfully'});
         } catch (error) {
-          res.status(error.status || 500)
-          .json({
-            success : false,
-            message : error.message || 'Internal server error'
-          })   
+            next(error);
         }
     },
-    deleteUserCalories : async(req, res) =>{
+    deleteUserCalories : async(req, res, next) =>{
         try {
             let { _id } = req.query;
             await userCaloryHistoryModel.deleteOne({_id : _id});
@@ -211,7 +207,7 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'Calories deleted successfully'});
         } catch (error) {
-            
+            next(error);
         }
     },
 }

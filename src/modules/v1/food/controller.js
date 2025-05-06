@@ -3,7 +3,7 @@ const actiivityModel = require('../../../models/activities');
 const userCaloryHistoryModel = require('../../../models/user-calorie-histories');
 
 module.exports = {
-    getAllFoodGroups : async(req, res) =>{
+    getAllFoodGroups : async(req, res, next) =>{
         try {
             const foodGroups = await foodModel.aggregate([
                 {
@@ -32,7 +32,7 @@ module.exports = {
             .status(200)
             .json({success : true, message : 'Success', data : {foodGroups}});
         } catch (error) {
-            
+            next(error);
         }
     },
 }
