@@ -1,65 +1,54 @@
 const xlsx = require("xlsx");
 const fs = require("fs/promises");
 const path =  require('path');
+const jwt = require('jsonwebtoken');
+const nodemailer = require('nodemailer');
+const bcrypt = require('bcrypt');
 
-const foodModel = require('../models/foods');
-const actiivityModel = require('../models/activities');
+const getJWTToken = (data, time)=>{
+    const token = jwt.sign(data, process.env.JWT_SECRET_KEY, {expiresIn : time})
+    return token;
+}
 
-async function readExcelToArray(filePath) {
-    try {
-      // Read the file buffer asynchronously
-      const fileBuffer = await fs.readFile(filePath);
-      // Parse it using xlsx
-      const workbook = xlsx.read(fileBuffer, { type: "buffer" });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData = xlsx.utils.sheet_to_json(sheet);
-      return jsonData;
-    } catch (error) {
-      console.error("Error reading Excel:", error);
-      throw error;
-    }
-}
-  
-const convertFoodExcelDataToPlaneFields = async (excelList)=>{
-    const foodList = excelList.map(food => ({
-        name : food['name'],
-        group : food['Food Group'],
-        calories : food['Calories'],
-        serving : food['Serving Description 1 (g)'] || '1 qty'
-    }))
-    return foodList;
-}
-const convertActivityExcelDataToPlaneFields = async (excelList)=>{
-    const activityList = excelList.map(activity => ({
-        name : activity['ACTIVITY'],
-        category : activity['SPECIFIC MOTION'],
-        met_value : activity['METs']
-    }))
-    return activityList;
-}
-  
-const loadExcelFilesToDB = async()=>{
-    try {
-        const isfoodCollectionFilled = await foodModel.countDocuments();
-        if(!isfoodCollectionFilled){    
-            const foodFilePath = path.join(__dirname, '../assets', 'food-calories.xlsx');
-            const foodExcelList = await readExcelToArray(foodFilePath);
-            const foodList = await convertFoodExcelDataToPlaneFields(foodExcelList);
-            await foodModel.insertMany(foodList);
+const sendEmail = (email, subject, text)=>{
+        
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.SMTP_EMAIL,
+            pass: process.env.SMTP_PASSWORD
         }
+    });
 
-        const isactivityCollectionFilled = await actiivityModel.countDocuments();
-        if(!isactivityCollectionFilled){    
-            const activityFilePath = path.join(__dirname, '../assets', 'MET-values.xlsx');
-            const activityExcelList = await readExcelToArray(activityFilePath);
-            const activityList = await convertActivityExcelDataToPlaneFields(activityExcelList);
-            await actiivityModel.insertMany(activityList);
+    const mailOptions = {
+        from: process.env.SMTP_EMAIL,
+        to: email,
+        subject: subject,
+        text: text
+    };
+
+    console.log(process.env.SMTP_EMAIL, process.env.SMTP_PASSWORD)
+    transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+            console.log(error);
+        } else {
+            console.log('Email sent: ' + info.response);
         }
-
-    } catch (error) {
-        console.log(error);
-    }
+    });
 }
 
-module.exports = {loadExcelFilesToDB}
+const decodeToken = (token)=>{
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
+    return decodedToken;
+}
+
+const hashPassword =async (password)=>{
+    const hashedPassword = await bcrypt.hash(password, Number(process.env.BCRYPT_ROUNDS));
+    return hashedPassword;
+}
+
+const matchPassword = async(password, hashedPassword)=>{
+    return await bcrypt.compare(password, hashedPassword);
+}
+
+module.exports = {getJWTToken, sendEmail, decodeToken, hashPassword, matchPassword}

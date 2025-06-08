@@ -1,84 +1,45 @@
 const userModel = require('../../../models/users');
-const userCaloryHistoryModel = require('../../../models/user-calorie-histories');
+const { CustomError } = require('../../../utils/customError');
+const { matchPassword, hashPassword } = require('../../../utils/helperFunctions');
 
 module.exports = {
-    create : async(req, res, next) =>{
+    updateProfile : async(req, res, next) =>{
         try {
-            const {name, gender, age, height, weight} = req.body;
+            const {name} = req.body;
+            const userId = req.user._id;
+
             const data = {
-                name,
-                gender,
-                age,
-                height,
-                weight
+                name
             }
-            await userModel.create(data);
+            await userModel.updateOne({_id : userId}, data);
 
             res
             .status(201)
-            .json({success : true, message : 'User created successfully'});
-        } catch (error) {
-            next(error);
-        }
-    },
-    list : async(req, res, next) =>{
-        try {
-            let { skip, limit } = req.query;
-            skip = skip || 0;
-            limit = limit || 10;
-
-            const users = await userModel.find().skip(skip).limit(limit);
-            const count = await userModel.countDocuments();   
-
-            res
-            .status(200)
-            .json({success : true, message : 'success', data : { users, count }});
-        } catch (error) {
-            console.log(error);    
-            next(error);
-        }
-    },
-    get : async(req, res) =>{
-        try {
-            let { _id } = req.query;
-            const user = await userModel.findOne({_id});
-            
-            res
-            .status(200)
-            .json({success : true, message : 'Success', data : {user}});
-        } catch (error) {
-            next(error);
-        }
-    },
-    update : async(req, res, next) =>{
-        try {
-            const {_id, name, gender, age, height, weight} = req.body;
-            const updateData = {
-                name,
-                gender,
-                age,
-                height,
-                weight
-            }
-            await userModel.updateOne({_id}, updateData);
-
-            res
-            .status(200)
             .json({success : true, message : 'User updated successfully'});
         } catch (error) {
             next(error);
         }
     },
-    delete : async(req, res, next) =>{
+    changePassword : async(req, res, next) =>{
         try {
-            let { _id } = req.query;
-            await userCaloryHistoryModel.deleteMany({user_id : _id});
-            await userModel.deleteOne({_id});
+            const { old_password, new_password, confirm_password } = req.query;
+            const userId = req.user._id;
+
+            if(!matchPassword(old_password, req.user.password)){
+                throw new CustomError(400, 'Old Password not matched', 'changePassword');
+            }else if(new_password != confirm_password){
+                throw new CustomError(400, 'Confirm Password not matched', 'changePassword');
+            }else if(old_password == new_password ){
+                throw new CustomError(400, 'Old and new password can\'t be same', 'changePassword');
+            }
+
+            await userModel.updateOne({_id : userId}, {password : hashPassword(new_password)});
             
             res
             .status(200)
-            .json({success : true, message : 'User deleted successfully'});
+            .json({success : true, message : 'Password updated successfully'});
         } catch (error) {
+            console.log(error);    
             next(error);
         }
     },
